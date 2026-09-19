@@ -5,7 +5,7 @@ from mcpgw.core import Delegation, Gateway, Tool
 
 def setup():
  g=Gateway(); g.register(Tool("infra","get_service_status","v1","READ")); g.register(Tool("infra","scale_service","v1","WRITE")); g.register(Tool("utility","get_synthetic_secret_demo","v1","READ")); return g
-def d(scopes={"infra.write"}):return Delegation("alice","codex","payments",scopes,time.time()+60)
+def d(scopes=None):return Delegation("alice","codex","payments",scopes or {"infra.write"},time.time()+60)
 def test_discovery_and_parameter_denial():
  g=setup(); assert "scale_service" not in g.discover(d(set())); assert g.call(d(),"infra","scale_service",{"team":"identity","replicas":2})=="DENY:cross-team"
 def test_exact_approval_binding():
