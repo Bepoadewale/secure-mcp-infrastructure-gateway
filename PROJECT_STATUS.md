@@ -22,7 +22,7 @@ FOUNDATION
 
 ## Known Failures
 
-- Remote fetch blocked by DNS on 2026-09-19.
+- None known from the current local validation suite.
 
 ## Current P0 Objective
 
