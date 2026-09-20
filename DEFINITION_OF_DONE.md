@@ -20,3 +20,11 @@
 - **PARTIALLY VALIDATED:** live MCP integration exists but central governance story is incomplete.
 - **LOCAL END-TO-END VALIDATED:** success path runs locally with material security/recovery/audit gaps.
 - **PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE:** every checked gate has executed evidence.
+
+# Clean-Room Reproducibility Gate
+
+`PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE` requires two executed clean-room cycles: clone → install → bootstrap gateway, identity/policy fixtures, two MCP servers → smoke → filtered discovery/governed call/approval/delegation demo → schema or policy failure/audit demo → validation → project-scoped cleanup → second clean bootstrap/demo. Planned commands: `make install`, `make bootstrap-local`, `make smoke`, `make demo-mcp`, `make demo-security`, `make verify`, `make clean-local`.
+
+- [ ] Clean clone/bootstrap has no hidden state; primary and failure demos pass.
+- [ ] Cleanup removes only this project and unrelated resources survive.
+- [ ] Post-cleanup absence and second bootstrap/demo are recorded in `docs/VALIDATION.md`.
