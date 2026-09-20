@@ -1,4 +1,15 @@
+# Completion Target
+
+PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE
+
+# Current Completion Blockers
+
+- Execute two MCP fixture servers through JWT identity, filtered discovery, OPA parameter policy, approval, delegation, and audit.
+- Demonstrate schema drift, secret response, kill switch, delegation expiry, and unauthorized/replay failures.
+
 # P0 — Required for Portfolio Claim
+
+P0 blocks PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE; do not select P1/P2 work first.
 
 - Verify current MCP SDK/spec and record supported version.
 - Build two local fixture servers; gateway actual `tools/list`/`tools/call`.
