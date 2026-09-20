@@ -4,6 +4,10 @@
 
 FOUNDATION
 
+## Maturity Model
+
+`FOUNDATION` → `PARTIALLY VALIDATED` → `LOCAL END-TO-END VALIDATED` → `PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE`.
+
 ## Executed and Verified
 
 - Delegation bounds, filtered registry, approval hashing, schema-drift quarantine and redaction core tests.
@@ -27,6 +31,15 @@ FOUNDATION
 ## Current P0 Objective
 
 Proxy live `tools/list` and `tools/call` for two local MCP fixture servers through enforced policy.
+
+## Completion Blockers
+
+- No live MCP servers, protocol interception, identity, OPA, approval, delegation, or persistent audit path has executed.
+- Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
+
+## Explicitly Unexecuted Production Adapters
+
+- Enterprise OAuth federation, SPIFFE/Vault, production PKI, and managed authorization systems.
 
 ## Last Validation
 

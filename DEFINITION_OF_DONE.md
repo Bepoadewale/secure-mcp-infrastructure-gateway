@@ -1,6 +1,22 @@
 # Definition of Done
 
-- **Level 1:** policy/domain safety tests.
-- **Level 2:** local MCP fixture discovery or invocation is live.
-- **Level 3:** identity → filtered discovery → parameter policy → approval/scoped credential → real tool call → response controls/audit, including denial/drift cases.
-- **Level 4:** reproducible demo/CI, persistent evidence and current-spec documentation with no protocol-agnostic overclaim.
+# Portfolio Complete — Local-First Scope Gate
+
+- [ ] Current supported MCP SDK/spec runs at least two local fixture servers with actual `tools/list` and `tools/call` traffic through the gateway.
+- [ ] Signed JWT/JWKS or equivalent validates human, agent, client, and relevant downstream identities.
+- [ ] Unauthorized tools are filtered from discovery where policy requires, not only denied on call.
+- [ ] Live OPA or equivalent enforces tool and parameter-level policy.
+- [ ] Protected write binds exact action hash to approval; mutation/stale action and self-approval are denied.
+- [ ] Short-lived downstream delegation cannot amplify privilege and expiration is executed.
+- [ ] Response security redacts secrets and contains relevant injection behavior.
+- [ ] Schema drift quarantines changed tools; kill switch blocks governed writes.
+- [ ] Persistent tamper-evident/hash-linked audit operates where claimed.
+- [ ] Unauthorized tool/parameter, expired delegation, schema rug pull, secret response, kill switch, and replay/failure scenarios are executed.
+- [ ] Reproducible core demo, meaningful tests, current-spec record, and green CI exist; docs label unexecuted enterprise adapters.
+
+## Maturity Levels
+
+- **FOUNDATION:** policy/domain logic exists.
+- **PARTIALLY VALIDATED:** live MCP integration exists but central governance story is incomplete.
+- **LOCAL END-TO-END VALIDATED:** success path runs locally with material security/recovery/audit gaps.
+- **PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE:** every checked gate has executed evidence.
