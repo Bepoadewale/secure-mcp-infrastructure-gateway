@@ -12,10 +12,11 @@ PARTIALLY VALIDATED
 
 - Delegation bounds, filtered registry, approval hashing, schema-drift quarantine and redaction core tests.
 - Official MCP Python SDK `2.2.0` Streamable HTTP traffic to the local infrastructure fixture: real `tools/list` and `tools/call` executed.
+- Gateway FastAPI route → official MCP client → two independent local MCP fixtures executed. Discovery filters the protected write tool and an allowed read call reaches the upstream fixture.
 
 ## Implemented but Not End-to-End Validated
 
-- Protocol-agnostic authorization logic; it has not yet governed the live MCP fixture path.
+- Protocol-agnostic authorization logic and live transport interception using explicitly development-only scope headers.
 
 ## Simulated
 
@@ -31,11 +32,11 @@ PARTIALLY VALIDATED
 
 ## Current P0 Objective
 
-Proxy live `tools/list` and `tools/call` for two local MCP fixture servers through enforced policy.
+Replace development scope headers with signed JWT/JWKS identity and live OPA policy before protected MCP calls.
 
 ## Completion Blockers
 
-- Only one live MCP fixture has executed; gateway interception, a second fixture, identity, OPA, approval, delegation, and persistent audit remain unexecuted.
+- Signed identity, OPA, approval, delegation, schema-drift enforcement, response redaction in the live path, and persistent audit remain unexecuted.
 - Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
 
 ## Explicitly Unexecuted Production Adapters
@@ -44,12 +45,12 @@ Proxy live `tools/list` and `tools/call` for two local MCP fixture servers throu
 
 ## Last Validation
 
-- `.venv/bin/python -m pytest -q`: 5 passed, including official SDK `tools/list` and `tools/call` against a spawned local fixture.
+- `.venv/bin/python -m pytest -q`: 6 passed, including two-fixture gateway interception and official SDK `tools/list`/`tools/call` tests.
 - `.venv/bin/python -m ruff check gateway/src fixtures tests`: passed.
 
 ## Last Updated
 
-2026-09-26, Week 9 local MCP fixture increment (uncommitted).
+2026-09-26, Week 9 gateway transport interception increment (uncommitted).
 
 ## Clean-Room Reproducibility
 

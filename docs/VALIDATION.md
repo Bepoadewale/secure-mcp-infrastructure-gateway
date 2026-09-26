@@ -32,3 +32,19 @@ Observed results:
 This is direct fixture traffic only. The gateway does not yet intercept this
 traffic, and this evidence does not validate identity, OPA, approval,
 delegation, audit, or clean-room reproducibility.
+
+## Gateway transport interception
+
+The gateway integration test starts both fixture servers on ephemeral loopback
+ports, then executes:
+
+```text
+FastAPI gateway route → official MCP Client → Streamable HTTP fixture
+```
+
+The no-scope discovery response omitted `scale_service`; `infra.write`
+discovery included it. A no-scope direct write returned HTTP `403`. A permitted
+read invocation returned the structured upstream service-health response.
+
+This uses development-only headers for temporary test scoping. It is not an
+identity or policy validation and will be replaced by JWT/JWKS plus OPA.

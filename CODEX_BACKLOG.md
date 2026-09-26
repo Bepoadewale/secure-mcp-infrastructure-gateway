@@ -11,8 +11,8 @@ PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE
 
 P0 blocks PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE; do not select P1/P2 work first.
 
-- Verify current MCP SDK/spec and record supported version.
-- Build two local fixture servers; gateway actual `tools/list`/`tools/call`.
+- [x] Verify current MCP SDK/spec and record supported version.
+- [x] Build two local fixture servers; gateway actual `tools/list`/`tools/call`.
 - Add signed local JWT/JWKS for distinct human, agent and client identities.
 - Enforce OPA tool/parameter policy and filtered discovery.
 - Demonstrate approval-bound write, short-lived downstream token, schema drift denial and persistent audit.
