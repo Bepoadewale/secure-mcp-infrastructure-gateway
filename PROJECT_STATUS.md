@@ -2,7 +2,7 @@
 
 ## Current Maturity
 
-FOUNDATION
+PARTIALLY VALIDATED
 
 ## Maturity Model
 
@@ -11,10 +11,11 @@ FOUNDATION
 ## Executed and Verified
 
 - Delegation bounds, filtered registry, approval hashing, schema-drift quarantine and redaction core tests.
+- Official MCP Python SDK `2.2.0` Streamable HTTP traffic to the local infrastructure fixture: real `tools/list` and `tools/call` executed.
 
 ## Implemented but Not End-to-End Validated
 
-- Protocol-agnostic authorization logic.
+- Protocol-agnostic authorization logic; it has not yet governed the live MCP fixture path.
 
 ## Simulated
 
@@ -22,7 +23,7 @@ FOUNDATION
 
 ## Architecture / Contracts Only
 
-- MCP SDK traffic, JWT/JWKS, OPA, credential exchange and persistent tamper-evident audit.
+- JWT/JWKS, OPA, credential exchange and persistent tamper-evident audit.
 
 ## Known Failures
 
@@ -34,7 +35,7 @@ Proxy live `tools/list` and `tools/call` for two local MCP fixture servers throu
 
 ## Completion Blockers
 
-- No live MCP servers, protocol interception, identity, OPA, approval, delegation, or persistent audit path has executed.
+- Only one live MCP fixture has executed; gateway interception, a second fixture, identity, OPA, approval, delegation, and persistent audit remain unexecuted.
 - Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
 
 ## Explicitly Unexecuted Production Adapters
@@ -43,12 +44,12 @@ Proxy live `tools/list` and `tools/call` for two local MCP fixture servers throu
 
 ## Last Validation
 
-- `PYTHONPATH=gateway/src ../ai-platform-control-plane/.venv/bin/python -m pytest -q`: 4 passed.
-- `../ai-platform-control-plane/.venv/bin/python -m ruff check gateway/src tests`: passed.
+- `.venv/bin/python -m pytest -q`: 5 passed, including official SDK `tools/list` and `tools/call` against a spawned local fixture.
+- `.venv/bin/python -m ruff check gateway/src fixtures tests`: passed.
 
 ## Last Updated
 
-2026-09-19, baseline `b781cd6`.
+2026-09-26, Week 9 local MCP fixture increment (uncommitted).
 
 ## Clean-Room Reproducibility
 
