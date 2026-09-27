@@ -58,7 +58,8 @@ class GatewayStore:
                 action_hash TEXT NOT NULL,
                 status TEXT NOT NULL,
                 created_at REAL NOT NULL,
-                approved_by TEXT
+                approved_by TEXT,
+                consumed_at REAL
             );
             CREATE TABLE IF NOT EXISTS audit_events (
                 sequence INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +72,25 @@ class GatewayStore:
                 event_hash TEXT NOT NULL,
                 created_at REAL NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS tool_schemas (
+                server TEXT NOT NULL,
+                tool TEXT NOT NULL,
+                schema_digest TEXT NOT NULL,
+                status TEXT NOT NULL,
+                PRIMARY KEY (server, tool)
+            );
+            CREATE TABLE IF NOT EXISTS gateway_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             """
+        )
+        try:
+            self._connection.execute("ALTER TABLE plans ADD COLUMN consumed_at REAL")
+        except sqlite3.OperationalError:
+            pass
+        self._connection.execute(
+            "INSERT OR IGNORE INTO gateway_settings (key, value) VALUES ('writes_disabled', 'false')"
         )
         self._connection.commit()
 
@@ -81,7 +100,9 @@ class GatewayStore:
         digest = action_hash(requester, team, server, tool, arguments)
         plan = Plan(str(uuid.uuid4()), requester, team, server, tool, digest, "PENDING_APPROVAL")
         self._connection.execute(
-            "INSERT INTO plans VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+            """INSERT INTO plans
+            (id, requester, team, server, tool, action_hash, status, created_at, approved_by, consumed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)""",
             (*plan.__dict__.values(), time.time()),
         )
         self._connection.commit()
@@ -121,6 +142,47 @@ class GatewayStore:
             requester, team, server, tool, arguments
         )
 
+    def consume_approval(self, plan_id: str) -> None:
+        updated = self._connection.execute(
+            "UPDATE plans SET status = 'EXECUTED', consumed_at = ? WHERE id = ? AND status = 'APPROVED'",
+            (time.time(), plan_id),
+        )
+        self._connection.commit()
+        if updated.rowcount != 1:
+            raise ValueError("approval was already consumed or is not approved")
+
+    def observe_schema(self, server: str, tool: str, digest: str) -> str:
+        row = self._connection.execute(
+            "SELECT schema_digest, status FROM tool_schemas WHERE server = ? AND tool = ?", (server, tool)
+        ).fetchone()
+        if row is None:
+            self._connection.execute(
+                "INSERT INTO tool_schemas VALUES (?, ?, ?, 'APPROVED')", (server, tool, digest)
+            )
+            self._connection.commit()
+            return "APPROVED"
+        if row["schema_digest"] != digest:
+            self._connection.execute(
+                "UPDATE tool_schemas SET status = 'QUARANTINED' WHERE server = ? AND tool = ?",
+                (server, tool),
+            )
+            self._connection.commit()
+            return "QUARANTINED"
+        return str(row["status"])
+
+    def writes_disabled(self) -> bool:
+        value = self._connection.execute(
+            "SELECT value FROM gateway_settings WHERE key = 'writes_disabled'"
+        ).fetchone()["value"]
+        return value == "true"
+
+    def set_writes_disabled(self, disabled: bool) -> None:
+        self._connection.execute(
+            "UPDATE gateway_settings SET value = ? WHERE key = 'writes_disabled'",
+            ("true" if disabled else "false",),
+        )
+        self._connection.commit()
+
     def audit(
         self,
         event_type: str,
@@ -148,3 +210,34 @@ class GatewayStore:
 
     def audit_events(self) -> list[dict[str, Any]]:
         return [dict(row) for row in self._connection.execute("SELECT * FROM audit_events ORDER BY sequence")]
+
+    def verify_audit_chain(self) -> bool:
+        """Verify immutable event material and predecessor links before trusting an audit export."""
+        previous_hash: str | None = None
+        for event in self.audit_events():
+            if event["previous_hash"] != previous_hash:
+                return False
+            material = "|".join(
+                [
+                    event["event_type"],
+                    event["subject"],
+                    event["team"],
+                    event["action_hash"] or "",
+                    event["metadata_json"],
+                    previous_hash or "",
+                    str(event["created_at"]),
+                ]
+            )
+            expected = hashlib.sha256(material.encode()).hexdigest()
+            if event["event_hash"] != expected:
+                return False
+            previous_hash = event["event_hash"]
+        return True
+
+    def audit_counts(self) -> dict[str, int]:
+        return {
+            str(row["event_type"]): int(row["count"])
+            for row in self._connection.execute(
+                "SELECT event_type, COUNT(*) AS count FROM audit_events GROUP BY event_type"
+            )
+        }

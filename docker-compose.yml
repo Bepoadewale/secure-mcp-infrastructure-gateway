@@ -7,7 +7,7 @@ services:
     volumes:
       - ./policy:/policies:ro
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8181/health"]
+      test: ["CMD", "/opa", "eval", "--format", "raw", "data.mcp.authz.decision"]
       interval: 3s
       timeout: 2s
       retries: 20

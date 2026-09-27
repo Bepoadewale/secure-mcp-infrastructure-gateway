@@ -41,6 +41,7 @@ class OpaPolicyEngine:
                         "team": identity.team,
                         "roles": sorted(identity.roles),
                         "scopes": sorted(identity.scopes),
+                        "delegated_by": identity.delegated_by,
                     },
                     "action": action,
                     "tool": tool,

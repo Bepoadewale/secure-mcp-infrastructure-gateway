@@ -58,7 +58,7 @@ def _wait_for_port(port: int) -> None:
 
 
 @contextmanager
-def _fixtures() -> Iterator[MCPTransportGateway]:
+def _fixtures(infra_script: str = "infra_server.py") -> Iterator[MCPTransportGateway]:
     infra_port, utility_port = _free_port(), _free_port()
     processes = [
         subprocess.Popen(
@@ -68,7 +68,7 @@ def _fixtures() -> Iterator[MCPTransportGateway]:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        for script, port in (("infra_server.py", infra_port), ("utility_server.py", utility_port))
+        for script, port in ((infra_script, infra_port), ("utility_server.py", utility_port))
     ]
     try:
         _wait_for_port(infra_port)
@@ -92,11 +92,10 @@ def test_gateway_filters_discovery_and_invokes_real_upstream_mcp_tool() -> None:
         client = TestClient(
             create_app(transport, authority, JwtVerifier(authority.jwks()), FixturePolicy())
         )
-        read_token = authority.issue(
-            subject="agent-1",
-            principal_type="agent",
+        read_token = authority.issue_agent_delegation(
+            human="alice",
+            agent="agent-1",
             team="payments",
-            roles=["agent"],
             scopes=["infra.read"],
         )
         write_token = authority.issue(
@@ -149,11 +148,10 @@ def test_protected_write_requires_independent_exact_approval_and_audits() -> Non
                 store,
             )
         )
-        requester = authority.issue(
-            subject="agent-1",
-            principal_type="agent",
+        requester = authority.issue_agent_delegation(
+            human="alice",
+            agent="agent-1",
             team="payments",
-            roles=["agent"],
             scopes=["infra.write"],
         )
         approver = authority.issue(
@@ -195,3 +193,107 @@ def test_protected_write_requires_independent_exact_approval_and_audits() -> Non
             "STALE_OR_UNAPPROVED_ACTION",
             "TOOL_CALLED",
         ]
+
+
+def test_gateway_redacts_upstream_secret_and_enforces_write_kill_switch() -> None:
+    with _fixtures() as transport:
+        authority = LocalJwtAuthority.generate()
+        store = GatewayStore()
+        client = TestClient(
+            create_app(transport, authority, JwtVerifier(authority.jwks()), ProtectedWritePolicy(), store)
+        )
+        reader = authority.issue(
+            subject="reader-1",
+            principal_type="human",
+            team="payments",
+            roles=["developer"],
+            scopes=["infra.read", "audit.read"],
+        )
+        admin = authority.issue(
+            subject="admin-1",
+            principal_type="human",
+            team="payments",
+            roles=["gateway_admin"],
+            scopes=["infra.write"],
+        )
+        secret_response = client.post(
+            "/api/v1/tools/utility/get_synthetic_secret_demo",
+            json={"arguments": {}},
+            headers={"Authorization": f"Bearer {reader}"},
+        )
+        assert secret_response.status_code == 200
+        assert "demo-super-secret-value" not in secret_response.text
+        assert "[REDACTED]" in secret_response.text
+
+        assert client.post(
+            "/api/v1/admin/write-kill-switch",
+            json={"writes_disabled": True},
+            headers={"Authorization": f"Bearer {admin}"},
+        ).status_code == 200
+        blocked = client.post(
+            "/api/v1/tools/infra/scale_service",
+            json={
+                "arguments": {
+                    "team": "payments",
+                    "service": "api",
+                    "replicas": 2,
+                    "environment": "dev",
+                }
+            },
+            headers={"Authorization": f"Bearer {admin}"},
+        )
+        assert blocked.status_code == 503
+        assert [event["event_type"] for event in store.audit_events()][-2:] == [
+            "WRITE_KILL_SWITCH_CHANGED",
+            "WRITE_KILL_SWITCH_DENIED",
+        ]
+        assert client.get(
+            "/api/v1/audit/verify", headers={"Authorization": f"Bearer {reader}"}
+        ).json() == {"valid": True}
+        metrics = client.get("/metrics")
+        assert metrics.status_code == 200
+        assert 'mcp_gateway_audit_events_total{event_type="RESPONSE_REDACTED"} 1' in metrics.text
+
+
+def test_schema_drift_is_quarantined_before_an_upstream_call() -> None:
+    authority = LocalJwtAuthority.generate()
+    store = GatewayStore()
+    writer = authority.issue(
+        subject="developer-1",
+        principal_type="human",
+        team="payments",
+        roles=["developer"],
+        scopes=["infra.read", "infra.write"],
+    )
+    with _fixtures() as initial_transport:
+        initial_client = TestClient(
+            create_app(initial_transport, authority, JwtVerifier(authority.jwks()), FixturePolicy(), store)
+        )
+        assert initial_client.get(
+            "/api/v1/tools", headers={"Authorization": f"Bearer {writer}"}
+        ).status_code == 200
+
+    with _fixtures("infra_server_drift.py") as drifted_transport:
+        drifted_client = TestClient(
+            create_app(drifted_transport, authority, JwtVerifier(authority.jwks()), FixturePolicy(), store)
+        )
+        discovered = drifted_client.get(
+            "/api/v1/tools", headers={"Authorization": f"Bearer {writer}"}
+        )
+        assert discovered.status_code == 200
+        assert "scale_service" not in {tool["name"] for tool in discovered.json()["tools"]}
+        blocked = drifted_client.post(
+            "/api/v1/tools/infra/scale_service",
+            json={
+                "arguments": {
+                    "team": "payments",
+                    "service": "api",
+                    "replicas": 2,
+                    "environment": "dev",
+                    "reason": "test",
+                }
+            },
+            headers={"Authorization": f"Bearer {writer}"},
+        )
+        assert blocked.status_code == 409
+        assert store.audit_events()[-1]["event_type"] == "TOOL_SCHEMA_QUARANTINED"
