@@ -1,87 +1,70 @@
 # Validation
 
-Run `PYTHONPATH=gateway/src python3 -m pytest -q` and lint once configured. Live status requires versions, services, captured `tools/list` and `tools/call` interactions, signed-token validation, enforced policy denial, audit persistence, and failure evidence; mocked method names are insufficient. Never fabricate validation.
-
-## Clean-Room Validation
-
-Do not populate this section until executed. Record: date, commit SHA, OS/environment, Docker/kind/Kubernetes and key dependency versions where applicable; clean starting state; exact install/bootstrap/smoke/demo/failure/validation/cleanup commands; observed results; post-cleanup absence verification; and the second-bootstrap result. No prior local state or fabricated evidence is acceptable.
-# Validation
-
-## MCP fixture baseline
-
-Date: 2026-09-26
-
-Environment: Python 3.14, official MCP Python SDK `2.2.0`, local loopback
-Streamable HTTP fixture.
-
-Commands executed:
+## Standard validation
 
 ```bash
-.venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m pytest -q
-.venv/bin/python -m ruff check gateway/src fixtures tests
+make verify
 ```
 
-Observed results:
+This runs Ruff and the test suite. The suite includes real localhost Streamable HTTP
+MCP fixture processes, FastAPI gateway routes, signed JWT verification, OPA policy
+composition, persisted approvals, response redaction, schema quarantine, kill-switch
+and audit-chain tests.
 
-- The official SDK connected to `http://127.0.0.1:<ephemeral-port>/mcp`.
-- `tools/list` returned `get_service_status` and `scale_service`.
-- `tools/call` executed `get_service_status` and returned structured fixture data.
-- Pytest: `5 passed`; Ruff: passed.
+## Executed Clean-Room Evidence
 
-This is direct fixture traffic only. The gateway does not yet intercept this
-traffic, and this evidence does not validate identity, OPA, approval,
-delegation, audit, or clean-room reproducibility.
+- **Date:** 2026-09-27
+- **Implementation commits:** `499f384` (`feat: complete governed MCP gateway local workflow`) and
+  `4076d17` (signed client-identity smoke proof).
+- **Environment:** macOS, Docker Desktop 29.0.1, Docker Compose v2.40.3-desktop.1,
+  Python 3.14.0, MCP Python SDK 2.2.0, OPA 1.21.0.
+- **Starting state:** `.local` absent; no project Compose services; no listeners on
+  `18090` (gateway), `19081` (infra fixture), or `19082` (utility fixture).
 
-## Gateway transport interception
+### Cycle 1
 
-The gateway integration test starts both fixture servers on ephemeral loopback
-ports, then executes:
-
-```text
-FastAPI gateway route → official MCP Client → Streamable HTTP fixture
+```bash
+make clean-local
+make bootstrap-local
+make smoke
+make demo-mcp
+make demo-security
+make verify
 ```
 
-The no-scope discovery response omitted `scale_service`; `infra.write`
-discovery included it. A no-scope direct write returned HTTP `403`. A permitted
-read invocation returned the structured upstream service-health response.
+Result: passed. Bootstrap created the project-scoped OPA Compose service/network,
+two local MCP fixture processes, FastAPI gateway, local SQLite state and synthetic
+Ed25519 demo signer. Smoke proved OPA/gateway readiness and filtered discovery.
+The primary demo executed a delegated agent read, approval-required production write,
+independent approval, live upstream MCP write and replay rejection (`409`). The security
+demo redacted the synthetic secret, denied a cross-team request through OPA (`403`),
+blocked a governed write through the kill switch (`503`), and verified the audit hash
+chain. `make verify` passed: Ruff clean and `14 passed`.
 
-This uses development-only headers for temporary test scoping. It is not an
-identity or policy validation and will be replaced by JWT/JWKS plus OPA.
+### Teardown and Cycle 2
 
-## Signed identity validation
-
-The gateway now requires an `Authorization: Bearer <JWT>` identity rather than
-caller-provided scope headers. Synthetic local Ed25519 identities were used
-only for validation. The test suite accepted valid human/agent tokens and
-rejected unsigned, wrong-signing-key, expired, wrong-issuer, and
-wrong-audience tokens. The gateway still needs live OPA policy, approval,
-delegation, and audit before this is a complete governed path.
-
-## Live OPA policy
-
-Docker Compose started the pinned `openpolicyagent/opa:1.21.0` service. Its
-`/v1/data/mcp/authz/decision` endpoint evaluated a signed-agent-equivalent
-input for `get_service_status` in the caller's team and returned:
-
-```json
-{"allow": true, "approval_required": false, "reason": "read_allowed"}
+```bash
+make clean-local
+test ! -e .local
+docker compose ps
+make bootstrap-local
+make smoke
+make demo-mcp
+make demo-security
+make verify
 ```
 
-The gateway policy client sends the same structured identity/tool/argument
-shape and returns a deny decision if the OPA HTTP call fails or is malformed.
+Result: post-cleanup verification confirmed no project local state, Compose services,
+or listeners on the three project ports. Cycle 2 passed the same smoke, primary and
+security scenarios and again reported Ruff clean with `14 passed`.
 
-## Protected write approval and audit
+### Final cleanup
 
-The local gateway integration test created a production `scale_service` plan
-for an agent, then exercised:
-
-```text
-agent request → APPROVAL_REQUIRED → independent human approval
-→ exact approved action executes through MCP
+```bash
+make clean-local
 ```
 
-The agent could not approve its own plan. Reusing the approved plan after
-changing `replicas` returned HTTP `409` before any upstream call. SQLite audit
-recorded `APPROVAL_REQUIRED`, `PLAN_APPROVED`,
-`STALE_OR_UNAPPROVED_ACTION`, and `TOOL_CALLED` as a hash-linked sequence.
+Result: `.local` absent, no project Compose service, and no project listener on ports
+`18090`, `19081` or `19082`. `clean-local` only targets PID files/state under this
+repository plus this repository’s Compose project; it does not use global Docker prune
+or broad host cleanup.

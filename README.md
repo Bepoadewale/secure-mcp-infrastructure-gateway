@@ -30,7 +30,7 @@ No cloud account or commercial MCP service is required.
 
 | Control | Local evidence |
 | --- | --- |
-| Signed identity | Ed25519 JWT/JWKS signature, issuer, audience, expiry, tenant/team, roles and scopes are verified. |
+| Signed identity | Ed25519 JWT/JWKS signature, issuer, audience, expiry, tenant/team, roles and scopes are verified for human, delegated-agent and client principals. |
 | Delegated agents | An agent JWT must name its human delegator; local delegations are capped at 60 seconds. |
 | Filtered discovery | A read-only agent cannot see `scale_service` in `tools/list`. |
 | Parameter policy | OPA denies cross-team reads and constrains writes by environment and replica count. |
