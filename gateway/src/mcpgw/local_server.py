@@ -40,6 +40,13 @@ def build_local_app() -> tuple[object, dict[str, str]]:
         "agent": authority.issue_agent_delegation(
             human="developer-1", agent="agent-1", team="payments", scopes=["infra.read"]
         ),
+        "client": authority.issue(
+            subject="client-1",
+            principal_type="client",
+            team="payments",
+            roles=["application"],
+            scopes=["infra.read"],
+        ),
     }
     tokens_path = state_dir / "demo-tokens.json"
     tokens_path.write_text(json.dumps(tokens), encoding="utf-8")

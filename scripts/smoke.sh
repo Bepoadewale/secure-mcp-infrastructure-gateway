@@ -9,6 +9,7 @@ if ! curl -fsS --max-time 10 "http://127.0.0.1:${GATEWAY_PORT}/metrics" | grep -
   exit 1
 fi
 agent="$(token agent)"
+client="$(token client)"
 tools="$(curl -fsS --max-time 10 -H "Authorization: Bearer ${agent}" "http://127.0.0.1:${GATEWAY_PORT}/api/v1/tools")"
 if [[ "${tools}" == *scale_service* ]]; then
   echo "Smoke failed: read-only agent discovered protected write." >&2
@@ -16,6 +17,10 @@ if [[ "${tools}" == *scale_service* ]]; then
 fi
 if [[ "${tools}" != *get_service_status* ]]; then
   echo "Smoke failed: expected read tool absent." >&2
+  exit 1
+fi
+if ! curl -fsS --max-time 10 -H "Authorization: Bearer ${client}" "http://127.0.0.1:${GATEWAY_PORT}/api/v1/tools" | grep -q 'get_service_status'; then
+  echo "Smoke failed: signed client identity could not discover its allowed read tool." >&2
   exit 1
 fi
 echo "smoke passed: OPA, gateway, two MCP fixtures, and filtered discovery are ready"

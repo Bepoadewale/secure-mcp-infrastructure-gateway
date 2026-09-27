@@ -22,6 +22,7 @@ def test_jwt_verifier_accepts_ed25519_identity_and_rejects_bad_claims() -> None:
     identity = verifier.verify(_token(authority, principal_type="agent", delegated_by="alice"))
     assert identity.principal_type == "agent"
     assert identity.delegated_by == "alice"
+    assert verifier.verify(_token(authority, principal_type="client")).principal_type == "client"
 
     for overrides in (
         {"lifetime_seconds": -1},
