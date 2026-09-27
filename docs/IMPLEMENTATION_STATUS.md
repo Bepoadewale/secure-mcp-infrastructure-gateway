@@ -14,6 +14,7 @@
 | Write kill switch | ✅ EXECUTED LOCALLY | Human gateway administrator disables governed writes; write returns `503`. |
 | Hash-linked audit | ✅ EXECUTED LOCALLY | SQLite event predecessor hash chain is verified and tamper detection is unit-tested. |
 | Metrics | ✅ EXECUTED LOCALLY | `/metrics` exposes persisted audit-event counters and kill-switch state. |
+| Local operator dashboard | ✅ EXECUTED LOCALLY | `/` renders auto-refreshing aggregate audit/control state without raw identity, arguments, or response data. |
 | Clean-room reproducibility | ✅ EXECUTED LOCALLY | Two clean state → bootstrap → smoke → governed MCP/security demo → validation cycles passed with safe project-scoped teardown between them. |
 | Enterprise identity / credentials | 📐 ARCHITECTURE / CONTRACT ONLY | Enterprise OIDC federation, Vault/SPIFFE, managed PKI and production delegation exchange are not executed. |
 | Production scale / HA | 📋 ROADMAP | Multi-region control plane, managed OPA, external MCP servers and durable production database topology. |

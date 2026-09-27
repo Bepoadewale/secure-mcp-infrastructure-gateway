@@ -61,6 +61,10 @@ recorded in `.local/`. It fails clearly if a required port is already occupied.
 `make clean-local` stops only those processes and `secure-mcp-infrastructure-gateway`
 Compose resources; it does not prune Docker globally or modify unrelated projects.
 
+When the stack is running, open `http://localhost:18090/` for the local operator
+dashboard. It auto-refreshes safe aggregate audit counts and control state; it never
+renders bearer tokens, raw tool arguments, or unredacted upstream responses.
+
 ## Main scenarios
 
 ### Delegated read

@@ -15,6 +15,7 @@ PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE
 - Live OPA 1.21.0 policy evaluated structured identity/tool/argument input. Read-only discovery hid the write tool; cross-team request returned `403`; production writes required approval.
 - SQLite persisted exact action-hash plans, independent approvals, consumed approval state and hash-linked audit events. Self-approval, parameter mutation and approval replay were denied before upstream invocation.
 - Synthetic secret response redaction, schema-drift quarantine, write kill switch, audit-chain verification and persisted `/metrics` evidence executed.
+- Local operator dashboard renders aggregate audit/control evidence without tokens, raw tool arguments or upstream response content.
 - Two clean-room cycles executed: teardown → bootstrap → smoke → primary demo → security demo → Ruff/pytest validation; teardown was verified between cycles and after the final run.
 
 ## Implemented but Not End-to-End Validated

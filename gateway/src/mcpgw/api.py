@@ -7,8 +7,9 @@ import os
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from mcpgw.auth import Identity, JwtVerifier, LocalJwtAuthority
+from mcpgw.dashboard import HTML as DASHBOARD_HTML
 from mcpgw.live import MCPTransportGateway, UpstreamServer
 from mcpgw.policy import OpaPolicyEngine, PolicyEngine
 from mcpgw.response_security import redact
@@ -55,6 +56,20 @@ def create_app(
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/", response_class=HTMLResponse)
+    def dashboard() -> str:
+        return DASHBOARD_HTML
+
+    @app.get("/api/v1/dashboard")
+    def dashboard_data() -> dict[str, Any]:
+        """Public local dashboard data intentionally contains aggregate state only."""
+        counts = store.audit_counts()
+        return {
+            "audit_counts": counts,
+            "total_events": sum(counts.values()),
+            "writes_disabled": store.writes_disabled(),
+        }
 
     @app.get("/.well-known/jwks.json")
     def jwks() -> dict[str, list[dict[str, str]]]:
