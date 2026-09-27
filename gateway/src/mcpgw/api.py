@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException
 from mcpgw.auth import Identity, JwtVerifier, LocalJwtAuthority
 from mcpgw.live import MCPTransportGateway, UpstreamServer
+from mcpgw.policy import OpaPolicyEngine, PolicyEngine
 from pydantic import BaseModel
 
 
@@ -20,6 +21,7 @@ def create_app(
     transport: MCPTransportGateway | None = None,
     authority: LocalJwtAuthority | None = None,
     verifier: JwtVerifier | None = None,
+    policy: PolicyEngine | None = None,
 ) -> FastAPI:
     transport = transport or MCPTransportGateway(
         [
@@ -29,6 +31,7 @@ def create_app(
     )
     authority = authority or LocalJwtAuthority.generate()
     verifier = verifier or JwtVerifier(authority.jwks())
+    policy = policy or OpaPolicyEngine(os.environ.get("OPA_URL", "http://127.0.0.1:18181"))
     app = FastAPI(title="Secure MCP Infrastructure Gateway", version="0.1.0")
 
     def identity(authorization: str | None = Header(default=None)) -> Identity:
@@ -49,12 +52,11 @@ def create_app(
 
     @app.get("/api/v1/tools")
     def tools(caller: Identity = Depends(identity)) -> dict[str, list[dict[str, Any]]]:  # noqa: B008
-        # OPA becomes the authority in the next increment; identity is already verified.
         discovered = asyncio.run(transport.list_tools())
         allowed = [
             tool
             for tool in discovered
-            if tool["name"] != "scale_service" or "infra.write" in caller.scopes
+            if policy.decide(caller, "discover", tool, {}).allow
         ]
         return {"tools": allowed}
 
@@ -65,8 +67,12 @@ def create_app(
         request: ToolCall,
         caller: Identity = Depends(identity),  # noqa: B008
     ) -> dict[str, Any]:
-        if tool_name == "scale_service" and "infra.write" not in caller.scopes:
-            raise HTTPException(status_code=403, detail="tool is not authorized")
+        tool = {"server": server, "name": tool_name}
+        decision = policy.decide(caller, "call", tool, request.arguments)
+        if decision.approval_required:
+            raise HTTPException(status_code=202, detail=decision.reason)
+        if not decision.allow:
+            raise HTTPException(status_code=403, detail=decision.reason)
         try:
             response = asyncio.run(transport.call_tool(server, tool_name, request.arguments))
         except KeyError as exc:

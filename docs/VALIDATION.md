@@ -57,3 +57,16 @@ only for validation. The test suite accepted valid human/agent tokens and
 rejected unsigned, wrong-signing-key, expired, wrong-issuer, and
 wrong-audience tokens. The gateway still needs live OPA policy, approval,
 delegation, and audit before this is a complete governed path.
+
+## Live OPA policy
+
+Docker Compose started the pinned `openpolicyagent/opa:1.21.0` service. Its
+`/v1/data/mcp/authz/decision` endpoint evaluated a signed-agent-equivalent
+input for `get_service_status` in the caller's team and returned:
+
+```json
+{"allow": true, "approval_required": false, "reason": "read_allowed"}
+```
+
+The gateway policy client sends the same structured identity/tool/argument
+shape and returns a deny decision if the OPA HTTP call fails or is malformed.

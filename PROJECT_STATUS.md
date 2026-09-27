@@ -14,10 +14,11 @@ PARTIALLY VALIDATED
 - Official MCP Python SDK `2.2.0` Streamable HTTP traffic to the local infrastructure fixture: real `tools/list` and `tools/call` executed.
 - Gateway FastAPI route → official MCP client → two independent local MCP fixtures executed. Discovery filters the protected write tool and an allowed read call reaches the upstream fixture.
 - Ed25519 JWT/JWKS verification executed for human and agent identities; unsigned, wrong-key, expired, wrong-issuer, and wrong-audience tokens were rejected.
+- Live OPA `1.21.0` evaluated structured MCP identity, tool, and parameter input through its REST API. Protected policy transport failures fail closed.
 
 ## Implemented but Not End-to-End Validated
 
-- Protocol-agnostic authorization logic and live transport interception with signed identity; OPA remains the pending policy authority.
+- Approval, delegation, schema-drift enforcement, response redaction, and audit logic remain outside the live path.
 
 ## Simulated
 
@@ -25,7 +26,7 @@ PARTIALLY VALIDATED
 
 ## Architecture / Contracts Only
 
-- OPA, credential exchange and persistent tamper-evident audit.
+- Credential exchange and persistent tamper-evident audit.
 
 ## Known Failures
 
@@ -33,11 +34,11 @@ PARTIALLY VALIDATED
 
 ## Current P0 Objective
 
-Replace the in-process scope rule with live OPA policy before protected MCP calls.
+Bind protected production MCP writes to persisted approvals and a durable audit chain.
 
 ## Completion Blockers
 
-- OPA, approval, delegation, schema-drift enforcement, response redaction in the live path, and persistent audit remain unexecuted.
+- Approval, delegation, schema-drift enforcement, response redaction in the live path, and persistent audit remain unexecuted.
 - Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
 
 ## Explicitly Unexecuted Production Adapters

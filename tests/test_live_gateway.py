@@ -15,8 +15,22 @@ from fastapi.testclient import TestClient
 from mcpgw.api import create_app
 from mcpgw.auth import JwtVerifier, LocalJwtAuthority
 from mcpgw.live import MCPTransportGateway, UpstreamServer
+from mcpgw.policy import PolicyDecision
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class FixturePolicy:
+    def decide(self, identity, action, tool, _arguments):
+        if (
+            action == "discover"
+            and tool["name"] == "scale_service"
+            and "infra.write" not in identity.scopes
+        ):
+            return PolicyDecision(False, False, "write_scope_required")
+        if action == "call" and tool["name"] == "scale_service":
+            return PolicyDecision(False, False, "write_denied_for_test")
+        return PolicyDecision(True, False, "fixture_policy_allowed")
 
 
 def _free_port() -> int:
@@ -67,20 +81,22 @@ def _fixtures() -> Iterator[MCPTransportGateway]:
 def test_gateway_filters_discovery_and_invokes_real_upstream_mcp_tool() -> None:
     with _fixtures() as transport:
         authority = LocalJwtAuthority.generate()
-        client = TestClient(create_app(transport, authority, JwtVerifier(authority.jwks())))
+        client = TestClient(
+            create_app(transport, authority, JwtVerifier(authority.jwks()), FixturePolicy())
+        )
         read_token = authority.issue(
             subject="agent-1",
             principal_type="agent",
             team="payments",
             roles=["agent"],
-            scopes=[],
+            scopes=["infra.read"],
         )
         write_token = authority.issue(
             subject="developer-1",
             principal_type="human",
             team="payments",
             roles=["developer"],
-            scopes=["infra.write"],
+            scopes=["infra.read", "infra.write"],
         )
         read_only = client.get("/api/v1/tools", headers={"Authorization": f"Bearer {read_token}"})
         assert read_only.status_code == 200
