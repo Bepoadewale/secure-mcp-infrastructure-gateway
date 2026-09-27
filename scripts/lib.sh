@@ -48,7 +48,8 @@ start_process() {
   if [[ -f "${pid_file}" ]] && kill -0 "$(cat "${pid_file}")" 2>/dev/null; then
     return
   fi
-  "$@" >"${STATE_DIR}/${name}.log" 2>&1 &
+  # Keep explicitly tracked project processes alive after the bootstrap shell exits.
+  nohup "$@" >"${STATE_DIR}/${name}.log" 2>&1 < /dev/null &
   echo $! >"${pid_file}"
 }
 
