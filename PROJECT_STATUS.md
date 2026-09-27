@@ -2,7 +2,7 @@
 
 ## Current Maturity
 
-FOUNDATION
+PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE
 
 ## Maturity Model
 
@@ -10,51 +10,57 @@ FOUNDATION
 
 ## Executed and Verified
 
-- Delegation bounds, filtered registry, approval hashing, schema-drift quarantine and redaction core tests.
+- FastAPI gateway → official MCP Python SDK 2.2.0 → two independently running local Streamable HTTP MCP fixtures executed for `tools/list` and `tools/call`.
+- Ed25519 JWT/JWKS verified signature, issuer, audience, expiry, team, scopes and human/delegated-agent/client principal types. An agent must carry a signed human delegation bounded to 60 seconds.
+- Live OPA 1.21.0 policy evaluated structured identity/tool/argument input. Read-only discovery hid the write tool; cross-team request returned `403`; production writes required approval.
+- SQLite persisted exact action-hash plans, independent approvals, consumed approval state and hash-linked audit events. Self-approval, parameter mutation and approval replay were denied before upstream invocation.
+- Synthetic secret response redaction, schema-drift quarantine, write kill switch, audit-chain verification and persisted `/metrics` evidence executed.
+- Local operator dashboard renders aggregate audit/control evidence without tokens, raw tool arguments or upstream response content.
+- Two clean-room cycles executed: teardown → bootstrap → smoke → primary demo → security demo → Ruff/pytest validation; teardown was verified between cycles and after the final run.
 
 ## Implemented but Not End-to-End Validated
 
-- Protocol-agnostic authorization logic.
+None within the local-first completion boundary.
 
 ## Simulated
 
-- Audit storage, approval and downstream execution.
+- The two MCP servers are intentionally small local infrastructure/utility fixtures. They prove protocol and governance behavior, not a cloud provider integration.
 
 ## Architecture / Contracts Only
 
-- MCP SDK traffic, JWT/JWKS, OPA, credential exchange and persistent tamper-evident audit.
+- Enterprise OIDC federation, service-to-service downstream token exchange, Vault/SPIFFE, production PKI, external MCP providers, PostgreSQL HA and multi-region deployment.
 
 ## Known Failures
 
-- None known from the current local validation suite.
+None known from the final local validation suite.
 
 ## Current P0 Objective
 
-Proxy live `tools/list` and `tools/call` for two local MCP fixture servers through enforced policy.
+Preserve the completed local-first proof while addressing only regressions or security fixes.
 
 ## Completion Blockers
 
-- No live MCP servers, protocol interception, identity, OPA, approval, delegation, or persistent audit path has executed.
-- Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
+None for `PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE`.
 
 ## Explicitly Unexecuted Production Adapters
 
-- Enterprise OAuth federation, SPIFFE/Vault, production PKI, and managed authorization systems.
+- Enterprise identity provider / federation.
+- Vault/SPIFFE and managed PKI.
+- External production MCP servers and downstream credential exchange.
+- Managed OPA, PostgreSQL HA, multi-region deployment and production telemetry export.
 
 ## Last Validation
 
-- `PYTHONPATH=gateway/src ../ai-platform-control-plane/.venv/bin/python -m pytest -q`: 4 passed.
-- `../ai-platform-control-plane/.venv/bin/python -m ruff check gateway/src tests`: passed.
+- `make clean-local && make bootstrap-local && make smoke && make demo-mcp && make demo-security && make verify`: passed twice from clean project state.
+- `make verify`: Ruff passed; pytest passed, `14 passed`.
+- Post-cleanup verification: `.local` absent, no project Compose service, and no listeners on `18090`, `19081` or `19082`.
 
 ## Last Updated
 
-2026-09-19, baseline `b781cd6`.
+2026-09-27, Week 9 completion pass; implementation commits `499f384`, `4076d17`.
 
 ## Clean-Room Reproducibility
 
-**Status: NOT YET VALIDATED**
+**Status: VALIDATED**
 
-Completion requires two executed clean-room cycles: clean start → bootstrap → smoke → primary demo
-→ failure/security demo → validation → project-scoped cleanup, followed by a second clean bootstrap
-and demo. Existing developer state is not evidence. This status must be `VALIDATED` before
-`PORTFOLIO COMPLETE — LOCAL-FIRST SCOPE` is allowed.
+Two clean-room cycles passed with project-scoped teardown between them. The exact command sequence and environment evidence are recorded in `docs/VALIDATION.md`.

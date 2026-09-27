@@ -2,9 +2,9 @@
 
 Mission: be the zero-trust authorization boundary between agents and MCP tools. The agent, tool metadata and downstream response are untrusted.
 
-Stack: Python 3.12 gateway core; future official MCP SDK, FastAPI, JWT/JWKS, OPA and SQLite/PostgreSQL.
+Stack: Python gateway; official MCP SDK, FastAPI, Ed25519 JWT/JWKS, OPA, SQLite and Docker Compose.
 
-Commands: `PYTHONPATH=gateway/src python3 -m pytest -q`; add lint/run targets only when configured.
+Commands: `make install`, `make bootstrap-local`, `make smoke`, `make demo-mcp`, `make demo-security`, `make verify`, `make clean-local`.
 
 Rules: protocol-agnostic tests do not validate MCP; fail closed on identity/policy/audit failure; do not audit secrets or issue broad credentials; no main pushes/secrets; update status/backlog after meaningful work.
 

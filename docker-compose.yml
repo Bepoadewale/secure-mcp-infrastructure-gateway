@@ -1,0 +1,13 @@
+services:
+  opa:
+    image: openpolicyagent/opa:1.21.0
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
+    ports:
+      - "18181:8181"
+    volumes:
+      - ./policy:/policies:ro
+    healthcheck:
+      test: ["CMD", "/opa", "eval", "--format", "raw", "data.mcp.authz.decision"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
