@@ -48,3 +48,12 @@ read invocation returned the structured upstream service-health response.
 
 This uses development-only headers for temporary test scoping. It is not an
 identity or policy validation and will be replaced by JWT/JWKS plus OPA.
+
+## Signed identity validation
+
+The gateway now requires an `Authorization: Bearer <JWT>` identity rather than
+caller-provided scope headers. Synthetic local Ed25519 identities were used
+only for validation. The test suite accepted valid human/agent tokens and
+rejected unsigned, wrong-signing-key, expired, wrong-issuer, and
+wrong-audience tokens. The gateway still needs live OPA policy, approval,
+delegation, and audit before this is a complete governed path.

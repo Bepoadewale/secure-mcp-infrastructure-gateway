@@ -5,7 +5,8 @@
 | Delegation/registry policy core | ✅ EXECUTED LOCALLY | pytest |
 | Approval/schema drift/redaction | 🟡 IMPLEMENTED / NOT FULLY EXECUTED | core tests |
 | MCP transport | ✅ EXECUTED LOCALLY | FastAPI gateway route used official MCP Python SDK `2.2.0` to discover/call two local Streamable HTTP fixture servers |
-| Gateway authorization | 🟡 IMPLEMENTED / NOT FULLY EXECUTED | Development-only scope headers filter discovery/calls; JWT/JWKS and OPA are still required |
+| Signed JWT/JWKS identity | ✅ EXECUTED LOCALLY | Ed25519 human/agent JWT validation with issuer, audience, expiry, signature, and principal-type checks |
+| Gateway authorization | 🟡 IMPLEMENTED / NOT FULLY EXECUTED | Signed identity scopes filter discovery/calls; OPA is still required as policy authority |
 | JWT/OPA/credential broker/audit | 📋 Planned | Week 9 P0 |
 
 ## Clean-room evidence boundary

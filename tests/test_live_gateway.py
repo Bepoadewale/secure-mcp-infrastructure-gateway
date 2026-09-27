@@ -13,6 +13,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 from mcpgw.api import create_app
+from mcpgw.auth import JwtVerifier, LocalJwtAuthority
 from mcpgw.live import MCPTransportGateway, UpstreamServer
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,15 +66,30 @@ def _fixtures() -> Iterator[MCPTransportGateway]:
 
 def test_gateway_filters_discovery_and_invokes_real_upstream_mcp_tool() -> None:
     with _fixtures() as transport:
-        client = TestClient(create_app(transport))
-        read_only = client.get("/api/v1/tools")
+        authority = LocalJwtAuthority.generate()
+        client = TestClient(create_app(transport, authority, JwtVerifier(authority.jwks())))
+        read_token = authority.issue(
+            subject="agent-1",
+            principal_type="agent",
+            team="payments",
+            roles=["agent"],
+            scopes=[],
+        )
+        write_token = authority.issue(
+            subject="developer-1",
+            principal_type="human",
+            team="payments",
+            roles=["developer"],
+            scopes=["infra.write"],
+        )
+        read_only = client.get("/api/v1/tools", headers={"Authorization": f"Bearer {read_token}"})
         assert read_only.status_code == 200
         assert {tool["name"] for tool in read_only.json()["tools"]} == {
             "get_service_status",
             "get_synthetic_secret_demo",
         }
 
-        writable = client.get("/api/v1/tools", headers={"x-gateway-scopes": "infra.write"})
+        writable = client.get("/api/v1/tools", headers={"Authorization": f"Bearer {write_token}"})
         assert {tool["name"] for tool in writable.json()["tools"]} == {
             "get_service_status",
             "get_synthetic_secret_demo",
@@ -83,12 +99,14 @@ def test_gateway_filters_discovery_and_invokes_real_upstream_mcp_tool() -> None:
         denied = client.post(
             "/api/v1/tools/infra/scale_service",
             json={"arguments": {"team": "payments", "service": "api", "replicas": 2, "environment": "dev"}},
+            headers={"Authorization": f"Bearer {read_token}"},
         )
         assert denied.status_code == 403
 
         called = client.post(
             "/api/v1/tools/infra/get_service_status",
             json={"arguments": {"team": "payments", "service": "api"}},
+            headers={"Authorization": f"Bearer {read_token}"},
         )
         assert called.status_code == 200
         assert called.json()["response"] == {"team": "payments", "service": "api", "status": "healthy"}

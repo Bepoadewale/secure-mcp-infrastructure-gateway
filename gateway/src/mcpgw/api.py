@@ -1,9 +1,4 @@
-"""Development gateway API that invokes real upstream MCP servers.
-
-JWT/JWKS authentication and OPA policy replace the development headers in the
-next security increment.  The headers are intentionally limited to local
-fixture use and are never described as an authentication mechanism.
-"""
+"""Gateway API that invokes real upstream MCP servers under signed identity."""
 
 from __future__ import annotations
 
@@ -11,7 +6,8 @@ import asyncio
 import os
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
+from mcpgw.auth import Identity, JwtVerifier, LocalJwtAuthority
 from mcpgw.live import MCPTransportGateway, UpstreamServer
 from pydantic import BaseModel
 
@@ -20,28 +16,45 @@ class ToolCall(BaseModel):
     arguments: dict[str, Any]
 
 
-def create_app(transport: MCPTransportGateway | None = None) -> FastAPI:
+def create_app(
+    transport: MCPTransportGateway | None = None,
+    authority: LocalJwtAuthority | None = None,
+    verifier: JwtVerifier | None = None,
+) -> FastAPI:
     transport = transport or MCPTransportGateway(
         [
             UpstreamServer("infra", os.environ.get("MCP_INFRA_URL", "http://127.0.0.1:19081/mcp")),
             UpstreamServer("utility", os.environ.get("MCP_UTILITY_URL", "http://127.0.0.1:19082/mcp")),
         ]
     )
+    authority = authority or LocalJwtAuthority.generate()
+    verifier = verifier or JwtVerifier(authority.jwks())
     app = FastAPI(title="Secure MCP Infrastructure Gateway", version="0.1.0")
+
+    def identity(authorization: str | None = Header(default=None)) -> Identity:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Bearer identity is required")
+        try:
+            return verifier.verify(authorization.removeprefix("Bearer "))
+        except PermissionError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/.well-known/jwks.json")
+    def jwks() -> dict[str, list[dict[str, str]]]:
+        return authority.jwks()
+
     @app.get("/api/v1/tools")
-    def tools(x_gateway_scopes: str = Header(default="")) -> dict[str, list[dict[str, Any]]]:
-        # Development-only policy placeholder; replaced by signed identity + OPA.
-        scopes = set(filter(None, x_gateway_scopes.split()))
+    def tools(caller: Identity = Depends(identity)) -> dict[str, list[dict[str, Any]]]:  # noqa: B008
+        # OPA becomes the authority in the next increment; identity is already verified.
         discovered = asyncio.run(transport.list_tools())
         allowed = [
             tool
             for tool in discovered
-            if tool["name"] != "scale_service" or "infra.write" in scopes
+            if tool["name"] != "scale_service" or "infra.write" in caller.scopes
         ]
         return {"tools": allowed}
 
@@ -50,10 +63,9 @@ def create_app(transport: MCPTransportGateway | None = None) -> FastAPI:
         server: str,
         tool_name: str,
         request: ToolCall,
-        x_gateway_scopes: str = Header(default=""),
+        caller: Identity = Depends(identity),  # noqa: B008
     ) -> dict[str, Any]:
-        scopes = set(filter(None, x_gateway_scopes.split()))
-        if tool_name == "scale_service" and "infra.write" not in scopes:
+        if tool_name == "scale_service" and "infra.write" not in caller.scopes:
             raise HTTPException(status_code=403, detail="tool is not authorized")
         try:
             response = asyncio.run(transport.call_tool(server, tool_name, request.arguments))

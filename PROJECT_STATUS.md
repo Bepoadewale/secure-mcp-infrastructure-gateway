@@ -13,10 +13,11 @@ PARTIALLY VALIDATED
 - Delegation bounds, filtered registry, approval hashing, schema-drift quarantine and redaction core tests.
 - Official MCP Python SDK `2.2.0` Streamable HTTP traffic to the local infrastructure fixture: real `tools/list` and `tools/call` executed.
 - Gateway FastAPI route → official MCP client → two independent local MCP fixtures executed. Discovery filters the protected write tool and an allowed read call reaches the upstream fixture.
+- Ed25519 JWT/JWKS verification executed for human and agent identities; unsigned, wrong-key, expired, wrong-issuer, and wrong-audience tokens were rejected.
 
 ## Implemented but Not End-to-End Validated
 
-- Protocol-agnostic authorization logic and live transport interception using explicitly development-only scope headers.
+- Protocol-agnostic authorization logic and live transport interception with signed identity; OPA remains the pending policy authority.
 
 ## Simulated
 
@@ -24,7 +25,7 @@ PARTIALLY VALIDATED
 
 ## Architecture / Contracts Only
 
-- JWT/JWKS, OPA, credential exchange and persistent tamper-evident audit.
+- OPA, credential exchange and persistent tamper-evident audit.
 
 ## Known Failures
 
@@ -32,11 +33,11 @@ PARTIALLY VALIDATED
 
 ## Current P0 Objective
 
-Replace development scope headers with signed JWT/JWKS identity and live OPA policy before protected MCP calls.
+Replace the in-process scope rule with live OPA policy before protected MCP calls.
 
 ## Completion Blockers
 
-- Signed identity, OPA, approval, delegation, schema-drift enforcement, response redaction in the live path, and persistent audit remain unexecuted.
+- OPA, approval, delegation, schema-drift enforcement, response redaction in the live path, and persistent audit remain unexecuted.
 - Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
 
 ## Explicitly Unexecuted Production Adapters
@@ -45,7 +46,7 @@ Replace development scope headers with signed JWT/JWKS identity and live OPA pol
 
 ## Last Validation
 
-- `.venv/bin/python -m pytest -q`: 6 passed, including two-fixture gateway interception and official SDK `tools/list`/`tools/call` tests.
+- `.venv/bin/python -m pytest -q`: 8 passed, including signed JWT/JWKS negative cases and two-fixture gateway interception.
 - `.venv/bin/python -m ruff check gateway/src fixtures tests`: passed.
 
 ## Last Updated
