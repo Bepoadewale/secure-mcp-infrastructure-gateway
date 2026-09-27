@@ -16,6 +16,7 @@ from mcpgw.api import create_app
 from mcpgw.auth import JwtVerifier, LocalJwtAuthority
 from mcpgw.live import MCPTransportGateway, UpstreamServer
 from mcpgw.policy import PolicyDecision
+from mcpgw.store import GatewayStore
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,6 +31,13 @@ class FixturePolicy:
             return PolicyDecision(False, False, "write_scope_required")
         if action == "call" and tool["name"] == "scale_service":
             return PolicyDecision(False, False, "write_denied_for_test")
+        return PolicyDecision(True, False, "fixture_policy_allowed")
+
+
+class ProtectedWritePolicy:
+    def decide(self, _identity, action, tool, arguments):
+        if action == "call" and tool["name"] == "scale_service" and arguments["environment"] == "production":
+            return PolicyDecision(False, True, "protected_write_requires_approval")
         return PolicyDecision(True, False, "fixture_policy_allowed")
 
 
@@ -126,3 +134,64 @@ def test_gateway_filters_discovery_and_invokes_real_upstream_mcp_tool() -> None:
         )
         assert called.status_code == 200
         assert called.json()["response"] == {"team": "payments", "service": "api", "status": "healthy"}
+
+
+def test_protected_write_requires_independent_exact_approval_and_audits() -> None:
+    with _fixtures() as transport:
+        authority = LocalJwtAuthority.generate()
+        store = GatewayStore()
+        client = TestClient(
+            create_app(
+                transport,
+                authority,
+                JwtVerifier(authority.jwks()),
+                ProtectedWritePolicy(),
+                store,
+            )
+        )
+        requester = authority.issue(
+            subject="agent-1",
+            principal_type="agent",
+            team="payments",
+            roles=["agent"],
+            scopes=["infra.write"],
+        )
+        approver = authority.issue(
+            subject="bob",
+            principal_type="human",
+            team="payments",
+            roles=["approver"],
+            scopes=["infra.write", "audit.read"],
+        )
+        args = {"team": "payments", "service": "api", "replicas": 3, "environment": "production"}
+        planned = client.post(
+            "/api/v1/tools/infra/scale_service",
+            json={"arguments": args},
+            headers={"Authorization": f"Bearer {requester}"},
+        )
+        assert planned.status_code == 202
+        plan_id = planned.json()["plan_id"]
+        assert client.post(
+            f"/api/v1/plans/{plan_id}/approve", headers={"Authorization": f"Bearer {requester}"}
+        ).status_code == 403
+        assert client.post(
+            f"/api/v1/plans/{plan_id}/approve", headers={"Authorization": f"Bearer {approver}"}
+        ).status_code == 200
+        stale = client.post(
+            "/api/v1/tools/infra/scale_service",
+            json={"arguments": {**args, "replicas": 4}, "approval_id": plan_id},
+            headers={"Authorization": f"Bearer {requester}"},
+        )
+        assert stale.status_code == 409
+        executed = client.post(
+            "/api/v1/tools/infra/scale_service",
+            json={"arguments": args, "approval_id": plan_id},
+            headers={"Authorization": f"Bearer {requester}"},
+        )
+        assert executed.status_code == 200
+        assert [event["event_type"] for event in store.audit_events()] == [
+            "APPROVAL_REQUIRED",
+            "PLAN_APPROVED",
+            "STALE_OR_UNAPPROVED_ACTION",
+            "TOOL_CALLED",
+        ]

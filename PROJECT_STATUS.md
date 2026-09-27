@@ -15,10 +15,11 @@ PARTIALLY VALIDATED
 - Gateway FastAPI route → official MCP client → two independent local MCP fixtures executed. Discovery filters the protected write tool and an allowed read call reaches the upstream fixture.
 - Ed25519 JWT/JWKS verification executed for human and agent identities; unsigned, wrong-key, expired, wrong-issuer, and wrong-audience tokens were rejected.
 - Live OPA `1.21.0` evaluated structured MCP identity, tool, and parameter input through its REST API. Protected policy transport failures fail closed.
+- Protected production write flow executed through the gateway using an exact persisted action hash: plan → independent human approval → upstream MCP call. A modified action was rejected as stale; audit events persisted in SQLite.
 
 ## Implemented but Not End-to-End Validated
 
-- Approval, delegation, schema-drift enforcement, response redaction, and audit logic remain outside the live path.
+- Delegation, schema-drift enforcement, response redaction, kill switch, and OPA-backed approval integration remain outside the live path.
 
 ## Simulated
 
@@ -26,7 +27,7 @@ PARTIALLY VALIDATED
 
 ## Architecture / Contracts Only
 
-- Credential exchange and persistent tamper-evident audit.
+- Credential exchange and schema-drift/kill-switch persistence.
 
 ## Known Failures
 
@@ -34,11 +35,11 @@ PARTIALLY VALIDATED
 
 ## Current P0 Objective
 
-Bind protected production MCP writes to persisted approvals and a durable audit chain.
+Add bounded downstream delegation plus live response redaction, schema quarantine, and kill-switch enforcement.
 
 ## Completion Blockers
 
-- Approval, delegation, schema-drift enforcement, response redaction in the live path, and persistent audit remain unexecuted.
+- Delegation, schema-drift enforcement, response redaction, kill switch, and replay/failure evidence remain unexecuted.
 - Filtered discovery, parameter denials, schema quarantine, response redaction, kill switch, and replay/failure evidence are unexecuted.
 
 ## Explicitly Unexecuted Production Adapters

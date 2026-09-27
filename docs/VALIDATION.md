@@ -70,3 +70,18 @@ input for `get_service_status` in the caller's team and returned:
 
 The gateway policy client sends the same structured identity/tool/argument
 shape and returns a deny decision if the OPA HTTP call fails or is malformed.
+
+## Protected write approval and audit
+
+The local gateway integration test created a production `scale_service` plan
+for an agent, then exercised:
+
+```text
+agent request → APPROVAL_REQUIRED → independent human approval
+→ exact approved action executes through MCP
+```
+
+The agent could not approve its own plan. Reusing the approved plan after
+changing `replicas` returned HTTP `409` before any upstream call. SQLite audit
+recorded `APPROVAL_REQUIRED`, `PLAN_APPROVED`,
+`STALE_OR_UNAPPROVED_ACTION`, and `TOOL_CALLED` as a hash-linked sequence.
