@@ -65,6 +65,10 @@ When the stack is running, open `http://localhost:18090/` for the local operator
 dashboard. It auto-refreshes safe aggregate audit counts and control state; it never
 renders bearer tokens, raw tool arguments, or unredacted upstream responses.
 
+### Temporary public operator dashboard
+
+`make public-demo` starts the local fixture gateway, executes the MCP demonstration, and prints a temporary Cloudflare Quick Tunnel URL for the aggregate operator dashboard. No Cloudflare account, named tunnel, or persistent credential is used. The URL is public, disposable, changes each run, and must never be committed. It is for local fixture evidence only; `Ctrl-C` stops only the tunnel and `make clean-local` removes project-owned processes and Compose resources.
+
 ## Main scenarios
 
 ### Delegated read
