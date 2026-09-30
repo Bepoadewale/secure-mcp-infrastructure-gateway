@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install bootstrap-local smoke demo-mcp demo-security verify clean-local
+.PHONY: help install bootstrap-local smoke demo-mcp demo-security verify clean-local public-demo
 
 help:
 	@printf '%s\n' 'Targets: install bootstrap-local smoke demo-mcp demo-security verify clean-local'
@@ -28,3 +28,6 @@ verify:
 
 clean-local:
 	./scripts/clean-local.sh
+
+public-demo:
+	./scripts/start-public-demo.sh
